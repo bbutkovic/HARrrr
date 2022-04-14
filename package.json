@@ -1,0 +1,22 @@
+{
+  "name": "harrrr",
+  "version": "1.0.0",
+  "description": "Web API that delivers the HAR response of an opened webpage",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node ./dist/index.js --disable-proto=throw",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Borna Butkovic",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^4.17.3",
+    "puppeteer": "^13.5.2",
+    "puppeteer-har": "^1.1.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "typescript": "^4.6.3"
+  }
+}
