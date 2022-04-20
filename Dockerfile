@@ -38,4 +38,12 @@ RUN npm ci
 
 COPY --from=build /usr/src/app/dist ./dist
 
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+RUN adduser \
+  --disabled-password \
+  har
+
+USER har
+
 CMD ["npm", "run", "start"]
