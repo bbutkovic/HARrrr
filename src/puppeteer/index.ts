@@ -33,10 +33,6 @@ export default async function gotoAndCapture(url: string,
         saveResponse: true,
     });
 
-    const sleep = (time: number): Promise<void> => {
-        return new Promise((resolve) => setTimeout(resolve, time));
-    };
-
     try {
         await page.goto(url, {
             waitUntil: "domcontentloaded"

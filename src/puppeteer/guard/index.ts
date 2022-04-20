@@ -1,8 +1,4 @@
 import { Page } from "puppeteer";
-import { promises } from "dns";
-const lookupIp = promises.lookup;
-import ip from "ip";
-// import isHostnameAllowed from "./hostname";
 import filterRequests from "./request";
 import filterResponses from "./response";
 
@@ -10,10 +6,6 @@ export interface GuardOpts {
     blockDomains?: string[];
     blockIps?: string[];
     blockPrivate?: boolean;
-}
-
-interface KeyVal<T> {
-    [key: string]: T;
 }
 
 type StatusUpdateCallback = (isValid: boolean) => void;

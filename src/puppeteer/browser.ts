@@ -5,7 +5,7 @@ export interface BrowserOptions {
     browserWSEndpoint?: string;
     timeout?: number;
     args?: Args;
-};
+}
 
 export default async function getBrowserInstance(options: BrowserOptions): Promise<Browser> {
     if (options?.browserWSEndpoint) {
