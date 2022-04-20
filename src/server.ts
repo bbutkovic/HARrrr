@@ -14,6 +14,14 @@ export default function serve(port: number, harService: HARService): void {
 
         const har = await harService.captureWebpage(url);
 
+        if (har === null) {
+            res.status(422).json({
+                message: "Resource unreachable.",
+            });
+
+            return;
+        }
+
         res.status(200).json(har);
     });
 

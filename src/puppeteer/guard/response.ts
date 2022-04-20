@@ -11,7 +11,8 @@ export default function filterResponses(
     page.on('response', (response) => {
         const requestedIp = response.remoteAddress().ip;
 
-        if (!isIpAllowed(requestedIp, blockIps, blockPrivate)) {
+        if (requestedIp && !isIpAllowed(requestedIp, blockIps, blockPrivate)) {
+            console.info(`Got response from blocked host: ${requestedIp}`);
             signal(false);
         }
     });

@@ -13,7 +13,7 @@ export default class HARService {
         this.options = options || {};
     }
 
-    async captureWebpage(url: string, captureOptions?: CaptureOptions): Promise<object> {
+    async captureWebpage(url: string, captureOptions?: CaptureOptions): Promise<object | null> {
         try {
             const result = await gotoAndCapture(url, captureOptions, this.options.guard);
 

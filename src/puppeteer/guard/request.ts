@@ -13,12 +13,14 @@ export default function filterRequests(
 ) {
     page.on('request', async (request) => {
         const hostname = getHost(request.url());
-        if (!isHostAllowed(hostname, blockDomains, blockIps, blockPrivate)) {
+        const isAllowed = await isHostAllowed(hostname, blockDomains, blockIps, blockPrivate);
+        if (!isAllowed) {
+            console.info(`Tried to access blocked host: ${hostname}`);
             if (signal) {
                 signal(false);
             }
 
-            request.abort();
+            request.abort('blockedbyclient');
             return;
         }
 

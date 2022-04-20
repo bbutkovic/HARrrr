@@ -1,14 +1,6 @@
-import { HTTPResponse, Page } from "puppeteer";
 import PuppeteerHar from "puppeteer-har";
-import puppeteer from "puppeteer";
 import getBrowserInstance, { BrowserOptions } from "./browser";
-import setupGuard, { GuardOpts } from "./guard";
-
-type GotoURLFunc = (url: string) => Promise<HTTPResponse>;
-type FinishFunc = () => Promise<object>;
-type CleanupFunc = () => Promise<void>;
-
-type GotoAndCaptureFunc = (url: string) => Promise<object>;
+import setupGuard, { GuardOpts, isBlockedAccessError } from "./guard";
 
 export interface CaptureOptions {
     // Timeout in ms
@@ -19,7 +11,7 @@ export interface CaptureOptions {
 export default async function gotoAndCapture(url: string,
     options?: CaptureOptions,
     guard?: boolean | GuardOpts
-): Promise<object> {
+): Promise<object | null> {
     const browser = await getBrowserInstance(options?.browser || {});
     const page = await browser.newPage();
 
@@ -41,15 +33,29 @@ export default async function gotoAndCapture(url: string,
         saveResponse: true,
     });
 
+    const sleep = (time: number): Promise<void> => {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    };
+
     try {
-        await page.goto(url);
+        await page.goto(url, {
+            waitUntil: "domcontentloaded"
+        });
 
         const result = await har.stop() as object;
         if (!requestIsValid) {
-            throw 'Invalid request.';
+            console.info(`Invalid request to ${url}`);
+            return null;
         }
 
         return result;
+    } catch (e) {
+        if (isBlockedAccessError(e)) {
+            console.info(`Invalid request to ${url}`);
+            return null;
+        }
+
+        throw e;
     } finally {
         har.cleanUp();
         await page.close();

@@ -33,3 +33,7 @@ export default function setupGuard(page: Page, {
         filterResponses(page, blockIps, blockPrivate, statusUpdateCallback);
     }
 }
+
+export function isBlockedAccessError(e: Error): boolean {
+    return typeof e.message === 'string' && e.message.includes('net::ERR_BLOCKED_BY_CLIENT');
+}

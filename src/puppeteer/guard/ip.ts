@@ -5,5 +5,5 @@ export function isIp(host: string): boolean {
 }
 
 export default function isIpAllowed(ip: string, blockIps: string[], blockPrivate: boolean): boolean {
-    return (!blockPrivate && isPrivate(ip)) && !blockIps.includes(ip);
+    return !(blockPrivate && isPrivate(ip)) || !blockIps.includes(ip);
 }
