@@ -1,7 +1,5 @@
 import { Page } from "puppeteer";
-import { promises } from "dns";
-import isIpAllowed, { isIp } from "./ip";
-const resolve = promises.resolve;
+import isHostAllowed, { getHost } from "./host";
 
 type SignalFunc = (valid: boolean) => void;
 export default function filterRequests(
@@ -26,36 +24,4 @@ export default function filterRequests(
 
         request.continue();
     });
-}
-
-function getHost(url: string): string {
-    return (new URL(url)).hostname;
-}
-
-async function isHostAllowed(
-    host: string,
-    blockDomains: string[],
-    blockIps: string[],
-    blockPrivate: boolean
-): Promise<boolean> {
-    if (isIp(host)) {
-        return isIpAllowed(host, blockIps, blockPrivate);
-    }
-
-    if (!isDomainAllowed(host, blockDomains)) {
-        return false;
-    }
-
-    try {
-        const resolvedIps = await resolve(host);
-
-        return resolvedIps.every((resolvedIp) => isIpAllowed(resolvedIp, blockIps, blockPrivate));
-    } catch (e) {
-        console.error(`Unexpected error when resolving IP: ${e}`);
-        return false;
-    }
-}
-
-function isDomainAllowed(domain: string, blockDomains: string[]): boolean {
-    return !blockDomains.includes(domain.toLowerCase());
 }
