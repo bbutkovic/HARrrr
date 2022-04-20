@@ -1,23 +1,27 @@
-import PuppeteerHar from "puppeteer-har";
+import gotoAndCapture, { CaptureOptions } from "./puppeteer";
+import { GuardOpts } from "./puppeteer/guard";
 
-import puppeteer from "puppeteer";
+export interface HARServiceOptions {
+    // Default timeout in ms
+    timeout?: number;
+    guard?: GuardOpts;
+}
+export default class HARService {
+    private options: HARServiceOptions;
 
-export default async function obtainHAR(url: string, timeoutInMs: number = 10 * 1000): Promise<object> {
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-    if (timeoutInMs) {
-        page.setDefaultTimeout(timeoutInMs);
+    constructor(options?: HARServiceOptions) {
+        this.options = options || {};
     }
 
-    const har = new PuppeteerHar(page);
-    await har.start({
-        saveResponse: true,
-    });
+    async captureWebpage(url: string, captureOptions?: CaptureOptions): Promise<object> {
+        try {
+            const result = await gotoAndCapture(url, captureOptions, this.options.guard);
 
-    await page.goto(url);
+            return result;
+        } catch (e) {
+            console.log(`Unhandled exception: ${e}`);
 
-    const harContent = await har.stop() as object;
-    await browser.close();
-
-    return harContent;
+            return {};
+        }
+    }
 }

@@ -1,8 +1,8 @@
 import express from 'express';
-import obtainHAR from './har';
+import HARService from './har';
 import { isValidUrl } from './util';
 
-export default function serve(port: number): void {
+export default function serve(port: number, harService: HARService): void {
     const app = express();
 
     app.get('/har', async (req, res) => {
@@ -12,7 +12,7 @@ export default function serve(port: number): void {
             return;
         }
 
-        const har = await obtainHAR(url);
+        const har = await harService.captureWebpage(url);
 
         res.status(200).json(har);
     });

@@ -1,4 +1,8 @@
 import serve from "./server";
+import getConfig from "./config";
+import HARService from "./har";
 
-const port = parseInt(process.env.PORT || "8080", 10);
-serve(port);
+const { port, harServiceSettings } = getConfig();
+const harService = new HARService(harServiceSettings);
+
+serve(port, harService);
