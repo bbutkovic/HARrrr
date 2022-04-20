@@ -4,7 +4,7 @@ declare module 'puppeteer-har' {
     export default class PuppeteerHar {
         constructor(page: Page);
 
-        cleanup(): void;
+        cleanUp(): void;
 
         start(startOptions?: StartOptions): Promise<void>;
 
