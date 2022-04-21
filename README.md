@@ -33,6 +33,7 @@ In order to use the provided Docker image in a _docker-compose_ scenario one mus
 Configuration of this service is performed through environment variables:
 
 * `PORT`: *number* - set the port for which to serve on (default: `8080`)
+* `TIMEOUT`: *number* - set Puppeteer timeout when opening webpages
 * `ENABLE_GUARD`: *true*/*false* - disables or enables filtering requests by IP and domain name (default: `true`)
 * `BLOCK_PRIVATE`: *true*/*false* - blocks "private" IP addresses (RFC 1918, APIPA, localhost, etc.) (default: `true`)
 * `BLOCK_DOMAINS`: *comma separated list of domains* - list of domains to block (ex: `"github.com,google.com"`) (default: `""`)
