@@ -13,7 +13,7 @@ Running Puppeteer inside of a Docker container without Chromium "--no-sandbox" f
 * `make image` - builds the Docker image for this service
 * `make run-image` - runs the Docker image with the provided seccomp.json and listens on port `8080`.
 
-In order to use the provided Docker image in a _docker-compose_ scenario one must provide the `seccomp.json` file as an option of a service, similar to:
+In order to use the provided Docker image in a _docker-compose_ scenario one must provide the `seccomp.json` (thanks to [jessfraz](https://github.com/jessfraz/dotfiles/blob/master/etc/docker/seccomp/chrome.json) file as an option of a service, similar to:
 
 ```
   version: '2'
@@ -26,6 +26,11 @@ In order to use the provided Docker image in a _docker-compose_ scenario one mus
         - 8080
       security_opt:
         - seccomp="seccomp.json"
+```
+
+Additionally one may need to execute the following on their host ([see why](https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#recommended-enable-user-namespace-cloning)):
+```
+sudo sysctl -w kernel.unprivileged_userns_clone=1
 ```
 
 ## Configuration
