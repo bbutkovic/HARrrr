@@ -1,22 +1,31 @@
 import PuppeteerHar from "puppeteer-har";
 import getBrowserInstance, { BrowserOptions } from "./browser";
 import setupGuard, { GuardOpts, isBlockedAccessError } from "./guard";
+import { ResourceUnreachableException } from "./guard/exception";
 
 export interface CaptureOptions {
     // Timeout in ms
     timeout?: number;
     browser?: BrowserOptions;
+    request?: RequestOptions;
+}
+
+type Headers = {
+    [key: string]: string | string[];
+};
+export interface RequestOptions {
+    headers?: string[];
 }
 
 export default async function gotoAndCapture(url: string,
-    options?: CaptureOptions,
+    captureOptions?: CaptureOptions,
     guard?: boolean | GuardOpts
-): Promise<object | null> {
-    const browser = await getBrowserInstance(options?.browser || {});
+): Promise<object> {
+    const browser = await getBrowserInstance(captureOptions?.browser || {});
     const page = await browser.newPage();
 
-    if (options?.timeout) {
-        page.setDefaultTimeout(options?.timeout);
+    if (captureOptions?.timeout) {
+        page.setDefaultTimeout(captureOptions?.timeout);
     }
 
     let requestIsValid = true;
@@ -41,14 +50,14 @@ export default async function gotoAndCapture(url: string,
         const result = await har.stop() as object;
         if (!requestIsValid) {
             console.info(`Invalid request to ${url}`);
-            return null;
+            throw new ResourceUnreachableException(url);
         }
 
         return result;
     } catch (e) {
         if (isBlockedAccessError(e)) {
             console.info(`Invalid request to ${url}`);
-            return null;
+            throw new ResourceUnreachableException(url);
         }
 
         throw e;
