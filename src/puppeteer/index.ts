@@ -1,4 +1,4 @@
-import PuppeteerHar from "puppeteer-har";
+import { captureNetwork } from "@kaytwo/puppeteer-har";
 import getBrowserInstance, { BrowserOptions } from "./browser";
 import setupGuard, { GuardOpts, isBlockedAccessError } from "./guard";
 import { ResourceUnreachableException } from "./guard/exception";
@@ -37,9 +37,8 @@ export default async function gotoAndCapture(url: string,
         setupGuard(page, guard, (status) => requestIsValid = status);
     }
 
-    const har = new PuppeteerHar(page);
-    await har.start({
-        saveResponse: true,
+    const getHar = await captureNetwork(page, {
+        saveResponses: true
     });
 
     try {
@@ -47,7 +46,7 @@ export default async function gotoAndCapture(url: string,
             waitUntil: "domcontentloaded"
         });
 
-        const result = await har.stop() as object;
+        const result = await getHar() as object;
         if (!requestIsValid) {
             console.info(`Invalid request to ${url}`);
             throw new ResourceUnreachableException(url);
@@ -62,7 +61,6 @@ export default async function gotoAndCapture(url: string,
 
         throw e;
     } finally {
-        har.cleanUp();
         await page.close();
         await browser.close();
     }
