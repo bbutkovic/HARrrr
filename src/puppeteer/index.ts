@@ -10,9 +10,6 @@ export interface CaptureOptions {
     request?: RequestOptions;
 }
 
-type Headers = {
-    [key: string]: string | string[];
-};
 export interface RequestOptions {
     headers?: string[];
 }
@@ -26,6 +23,17 @@ export default async function gotoAndCapture(url: string,
 
     if (captureOptions?.timeout) {
         page.setDefaultTimeout(captureOptions?.timeout);
+    }
+
+    if (captureOptions?.request?.headers) {
+        const headers = captureOptions?.request.headers.reduce((headers, header) => {
+            const pos = header.indexOf(':');
+            return pos > 1 ?
+                [...headers, [header.substring(0, pos), header.substring(pos)]] :
+                headers;
+        }, []);
+
+        await page.setExtraHTTPHeaders(Object.fromEntries(headers));
     }
 
     let requestIsValid = true;
