@@ -1,22 +1,41 @@
-import PuppeteerHar from "puppeteer-har";
+import { captureNetwork } from "@kaytwo/puppeteer-har";
+import { PuppeteerLifeCycleEvent } from "puppeteer";
 import getBrowserInstance, { BrowserOptions } from "./browser";
 import setupGuard, { GuardOpts, isBlockedAccessError } from "./guard";
+import { ResourceUnreachableException } from "./guard/exception";
 
 export interface CaptureOptions {
     // Timeout in ms
     timeout?: number;
+    waitUntil?: PuppeteerLifeCycleEvent;
     browser?: BrowserOptions;
+    request?: RequestOptions;
+}
+
+export interface RequestOptions {
+    headers?: string[];
 }
 
 export default async function gotoAndCapture(url: string,
-    options?: CaptureOptions,
+    captureOptions?: CaptureOptions,
     guard?: boolean | GuardOpts
-): Promise<object | null> {
-    const browser = await getBrowserInstance(options?.browser || {});
+): Promise<object> {
+    const browser = await getBrowserInstance(captureOptions?.browser || {});
     const page = await browser.newPage();
 
-    if (options?.timeout) {
-        page.setDefaultTimeout(options?.timeout);
+    if (captureOptions?.timeout) {
+        page.setDefaultTimeout(captureOptions?.timeout);
+    }
+
+    if (captureOptions?.request?.headers) {
+        const headers = captureOptions?.request.headers.reduce((headers, header) => {
+            const pos = header.indexOf(':');
+            return pos > 1 ?
+                [...headers, [header.substring(0, pos), header.substring(pos)]] :
+                headers;
+        }, []);
+
+        await page.setExtraHTTPHeaders(Object.fromEntries(headers));
     }
 
     let requestIsValid = true;
@@ -28,32 +47,30 @@ export default async function gotoAndCapture(url: string,
         setupGuard(page, guard, (status) => requestIsValid = status);
     }
 
-    const har = new PuppeteerHar(page);
-    await har.start({
-        saveResponse: true,
+    const getHar = await captureNetwork(page, {
+        saveResponses: true
     });
 
     try {
         await page.goto(url, {
-            waitUntil: "domcontentloaded"
+            waitUntil: captureOptions?.waitUntil || "networkidle2"
         });
 
-        const result = await har.stop() as object;
+        const result = await getHar() as object;
         if (!requestIsValid) {
             console.info(`Invalid request to ${url}`);
-            return null;
+            throw new ResourceUnreachableException(url);
         }
 
         return result;
     } catch (e) {
         if (isBlockedAccessError(e)) {
             console.info(`Invalid request to ${url}`);
-            return null;
+            throw new ResourceUnreachableException(url);
         }
 
         throw e;
     } finally {
-        har.cleanUp();
         await page.close();
         await browser.close();
     }

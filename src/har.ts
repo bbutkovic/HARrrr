@@ -1,5 +1,9 @@
-import gotoAndCapture, { CaptureOptions } from "./puppeteer";
+import gotoAndCapture from "./puppeteer";
+import type { CaptureOptions } from "./puppeteer";
 import { GuardOpts } from "./puppeteer/guard";
+import { ResourceUnreachableException } from "./puppeteer/guard/exception";
+
+export { CaptureOptions, ResourceUnreachableException };
 
 export interface HARServiceOptions {
     // Default timeout in ms
@@ -9,19 +13,15 @@ export interface HARServiceOptions {
 export default class HARService {
     private options: HARServiceOptions;
 
-    constructor(options?: HARServiceOptions) {
-        this.options = options || {};
+    constructor(options: HARServiceOptions = {}) {
+        this.options = options;
     }
 
-    async captureWebpage(url: string, captureOptions?: CaptureOptions): Promise<object | null> {
-        try {
-            const result = await gotoAndCapture(url, captureOptions, this.options.guard);
+    async captureWebpage(url: string, captureOptions: CaptureOptions = {}): Promise<object> {
+        const timeout = captureOptions.timeout ?
+            Math.min(captureOptions.timeout, this.options.timeout || 0) :
+            this.options.timeout;
 
-            return result;
-        } catch (e) {
-            console.log(`Unhandled exception: ${e}`);
-
-            return {};
-        }
+        return gotoAndCapture(url, { ...captureOptions, timeout }, this.options.guard);
     }
 }
