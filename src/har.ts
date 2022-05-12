@@ -13,11 +13,15 @@ export interface HARServiceOptions {
 export default class HARService {
     private options: HARServiceOptions;
 
-    constructor(options?: HARServiceOptions) {
-        this.options = options || {};
+    constructor(options: HARServiceOptions = {}) {
+        this.options = options;
     }
 
-    async captureWebpage(url: string, captureOptions?: CaptureOptions): Promise<object> {
-        return gotoAndCapture(url, captureOptions, this.options.guard);
+    async captureWebpage(url: string, captureOptions: CaptureOptions = {}): Promise<object> {
+        const timeout = captureOptions.timeout ?
+            Math.min(captureOptions.timeout, this.options.timeout || 0) :
+            this.options.timeout;
+
+        return gotoAndCapture(url, { ...captureOptions, timeout }, this.options.guard);
     }
 }

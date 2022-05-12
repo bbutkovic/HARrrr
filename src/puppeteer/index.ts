@@ -1,4 +1,5 @@
 import { captureNetwork } from "@kaytwo/puppeteer-har";
+import { PuppeteerLifeCycleEvent } from "puppeteer";
 import getBrowserInstance, { BrowserOptions } from "./browser";
 import setupGuard, { GuardOpts, isBlockedAccessError } from "./guard";
 import { ResourceUnreachableException } from "./guard/exception";
@@ -6,6 +7,7 @@ import { ResourceUnreachableException } from "./guard/exception";
 export interface CaptureOptions {
     // Timeout in ms
     timeout?: number;
+    waitUntil?: PuppeteerLifeCycleEvent;
     browser?: BrowserOptions;
     request?: RequestOptions;
 }
@@ -51,7 +53,7 @@ export default async function gotoAndCapture(url: string,
 
     try {
         await page.goto(url, {
-            waitUntil: "domcontentloaded"
+            waitUntil: captureOptions?.waitUntil || "networkidle2"
         });
 
         const result = await getHar() as object;

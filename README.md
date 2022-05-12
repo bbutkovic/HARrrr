@@ -43,3 +43,7 @@ Configuration of this service is performed through environment variables:
 * `BLOCK_PRIVATE`: *true*/*false* - blocks "private" IP addresses (RFC 1918, APIPA, localhost, etc.) (default: `true`)
 * `BLOCK_DOMAINS`: *comma separated list of domains* - list of domains to block (ex: `"github.com,google.com"`) (default: `""`)
 * `BLOCK_IPS`: *comma separated list of IPs or IP ranges* - list of IPs or IP ranges to block (ex: `"192.168.1.1,192.168.0.0/16"`) (default: `""`)
+
+### TODO
+
+* [ ] Wait until selector option
