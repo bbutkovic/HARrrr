@@ -28,15 +28,7 @@ export default async function gotoAndCapture(url: string,
     }
 
     if (captureOptions?.request?.headers) {
-        const headers = captureOptions?.request.headers.reduce((headers, header) => {
-            const pos = header.indexOf(':');
-            return pos > 1 ?
-                [...headers, [
-                    header.substring(0, pos).trim(),
-                    header.substring(pos + 1).trim()
-                ]] :
-                headers;
-        }, []);
+        const headers = prepareHeaders(captureOptions.request.headers);
 
         await page.setExtraHTTPHeaders(Object.fromEntries(headers));
     }
@@ -77,4 +69,16 @@ export default async function gotoAndCapture(url: string,
         await page.close();
         await browser.close();
     }
+}
+
+function prepareHeaders(headers: string[]): [string, string][] {
+    return headers.reduce((headers, header) => {
+        const pos = header.indexOf(':');
+        return pos > 1 ?
+            [...headers, [
+                header.substring(0, pos).trim(),
+                header.substring(pos + 1).trim()
+            ]] :
+            headers;
+    }, []);
 }
