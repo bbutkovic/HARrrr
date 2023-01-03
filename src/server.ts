@@ -51,6 +51,8 @@ export default function serve(port: number, harService: HARService): void {
                     return respondWithError(res, "Resource unreachable.");
                 }
 
+                console.error(`Unexpected error: ${e}`);
+
                 return respondWithError(res, "Internal server error", 500);
             }
         }
@@ -93,6 +95,8 @@ export default function serve(port: number, harService: HARService): void {
                 if (e instanceof ResourceUnreachableException) {
                     return respondWithError(res, "Resource unreachable.");
                 }
+
+                console.error(`Unexpected error: ${e}`);
 
                 return respondWithError(res, "Internal server error", 500);
             }
