@@ -1,6 +1,6 @@
 {
   "name": "harrrr",
-  "version": "1.0.1",
+  "version": "1.1.1",
   "description": "Web API that delivers the HAR response of an opened webpage",
   "main": "dist/index.js",
   "scripts": {
