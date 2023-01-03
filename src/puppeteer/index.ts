@@ -31,7 +31,10 @@ export default async function gotoAndCapture(url: string,
         const headers = captureOptions?.request.headers.reduce((headers, header) => {
             const pos = header.indexOf(':');
             return pos > 1 ?
-                [...headers, [header.substring(0, pos), header.substring(pos)]] :
+                [...headers, [
+                    header.substring(0, pos).trim(),
+                    header.substring(pos + 1).trim()
+                ]] :
                 headers;
         }, []);
 
