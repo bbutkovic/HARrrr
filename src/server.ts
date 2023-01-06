@@ -26,7 +26,7 @@ export default function serve(port: number, harService: HARService): void {
 
     app.get('/har',
         query('url').isURL(),
-        query('timeout').isInt({ min: 1, max: 60000 }).optional(),
+        query('timeout').isInt({ min: 1 }).optional(),
         async (req: Request<ParamsDictionary, unknown, unknown, GetRequestBody>, res) => {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -67,12 +67,12 @@ export default function serve(port: number, harService: HARService): void {
         body('url').isURL(),
         body('headers').isArray().optional(),
         body('headers.*').isString(),
-        body('timeout').isInt({ min: 1, max: 60000 }).optional(),
+        body('timeout').isInt({ min: 1 }).optional(),
         body('waitUntil').isString().isIn([
             'load', 'domcontentloaded', 'networkidle0', 'networkidle2'
         ]).optional(),
         body('waitForSelector').custom(waitForSelectorValidation).optional(),
-        body('waitForDuration').isInt({ min: 1, max: 60000 }).optional(),
+        body('waitForDuration').isInt({ min: 1 }).optional(),
         async (req: Request<ParamsDictionary, unknown, PostRequestBody>, res) => {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
