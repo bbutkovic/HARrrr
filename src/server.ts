@@ -97,14 +97,14 @@ export default function serve(port: number, harService: HARService): void {
                     };
                 }
 
+                if (timeout) {
+                    captureOptions.timeout = timeout;
+                }
+
                 if (!waitUntil && !waitForSelector && !waitForDuration) {
                     // if no wait options are specified, default to networkidle2
                     captureOptions.waitUntil = 'networkidle2';
                 } else {
-                    if (timeout) {
-                        captureOptions.timeout = timeout;
-                    }
-
                     if (waitUntil) {
                         captureOptions.waitUntil = waitUntil;
                     }
@@ -112,10 +112,10 @@ export default function serve(port: number, harService: HARService): void {
                     if (waitForSelector) {
                         captureOptions.waitForSelector = waitForSelector;
                     }
-                }
 
-                if (waitForDuration) {
-                    captureOptions.waitForDuration = waitForDuration;
+                    if (waitForDuration) {
+                        captureOptions.waitForDuration = waitForDuration;
+                    }
                 }
 
                 const har = await harService.captureWebpage(url, captureOptions);
