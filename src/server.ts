@@ -4,18 +4,21 @@ import bodyParser from 'body-parser';
 import { body, query, ValidationError, validationResult } from 'express-validator';
 
 import HARService, { CaptureOptions, ResourceUnreachableException } from './har';
-import { PuppeteerLifeCycleEvent } from 'puppeteer';
+import { Duration, LifeCycleEvent, Selector } from './puppeteer';
+import { TimeoutError } from 'puppeteer';
 
 export interface GetRequestBody {
     url: string;
     timeout?: number;
-    waitUntil?: PuppeteerLifeCycleEvent;
 }
+
 export interface PostRequestBody {
     url: string;
     headers?: string[];
-    timeout?: number;
-    waitUntil?: PuppeteerLifeCycleEvent;
+    timeout?: Duration;
+    waitUntil?: LifeCycleEvent;
+    waitForSelector?: Selector;
+    waitForDuration?: Duration;
 }
 
 export default function serve(port: number, harService: HARService): void {
@@ -24,7 +27,6 @@ export default function serve(port: number, harService: HARService): void {
     app.get('/har',
         query('url').isURL(),
         query('timeout').isInt({ min: 1, max: 60000 }).optional(),
-        query('waitUntil').isString().isIn(['load', 'domcontentloaded', 'networkidle0', 'networkidle2']).optional(),
         async (req: Request<ParamsDictionary, unknown, unknown, GetRequestBody>, res) => {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -32,23 +34,25 @@ export default function serve(port: number, harService: HARService): void {
             }
 
             try {
-                const { url, timeout, waitUntil } = req.query;
+                const { url, timeout } = req.query;
 
-                const captureOptions: CaptureOptions = {};
+                const captureOptions: CaptureOptions = {
+                    waitUntil: 'networkidle2'
+                };
 
                 if (timeout) {
                     captureOptions.timeout = timeout;
-                }
-
-                if (waitUntil) {
-                    captureOptions.waitUntil = waitUntil;
                 }
 
                 const har = await harService.captureWebpage(url);
                 res.status(200).json(har);
             } catch(e) {
                 if (e instanceof ResourceUnreachableException) {
-                    return respondWithError(res, "Resource unreachable.");
+                    return respondWithError(res, "Resource unreachable.", 422);
+                }
+
+                if (e instanceof TimeoutError) {
+                    return respondWithError(res, "Timeout reached.", 400);
                 }
 
                 console.error(`Unexpected error: ${e}`);
@@ -64,17 +68,29 @@ export default function serve(port: number, harService: HARService): void {
         body('headers').isArray().optional(),
         body('headers.*').isString(),
         body('timeout').isInt({ min: 1, max: 60000 }).optional(),
-        body('waitUntil').isString().isIn(['load', 'domcontentloaded', 'networkidle0', 'networkidle2']).optional(),
+        body('waitUntil').isString().isIn([
+            'load', 'domcontentloaded', 'networkidle0', 'networkidle2'
+        ]).optional(),
+        body('waitForSelector').custom(waitForSelectorValidation).optional(),
+        body('waitForDuration').isInt({ min: 1, max: 60000 }).optional(),
         async (req: Request<ParamsDictionary, unknown, PostRequestBody>, res) => {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
                 return validationError(res, errors.array());
             }
 
-            const { url, headers, timeout, waitUntil } = req.body;
+            const {
+                url,
+                headers,
+                timeout,
+                waitUntil,
+                waitForSelector,
+                waitForDuration,
+            } = req.body;
 
             try {
                 const captureOptions: CaptureOptions = {};
+
                 if (headers && Array.isArray(headers)) {
                     captureOptions.request = {
                         headers: headers
@@ -85,15 +101,32 @@ export default function serve(port: number, harService: HARService): void {
                     captureOptions.timeout = timeout;
                 }
 
-                if (waitUntil) {
-                    captureOptions.waitUntil = waitUntil;
+                if (!waitUntil && !waitForSelector && !waitForDuration) {
+                    // if no wait options are specified, default to networkidle2
+                    captureOptions.waitUntil = 'networkidle2';
+                } else {
+                    if (waitUntil) {
+                        captureOptions.waitUntil = waitUntil;
+                    }
+
+                    if (waitForSelector) {
+                        captureOptions.waitForSelector = waitForSelector;
+                    }
+
+                    if (waitForDuration) {
+                        captureOptions.waitForDuration = waitForDuration;
+                    }
                 }
 
                 const har = await harService.captureWebpage(url, captureOptions);
                 res.status(200).json(har);
             } catch(e) {
                 if (e instanceof ResourceUnreachableException) {
-                    return respondWithError(res, "Resource unreachable.");
+                    return respondWithError(res, "Resource unreachable.", 422);
+                }
+
+                if (e instanceof TimeoutError) {
+                    return respondWithError(res, "Timeout reached.", 400);
                 }
 
                 console.error(`Unexpected error: ${e}`);
@@ -106,6 +139,18 @@ export default function serve(port: number, harService: HARService): void {
     app.listen(port, () => {
         console.log(`Listening on ${port}`);
     });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function waitForSelectorValidation(value: any): boolean {
+    if (typeof value === 'string') {
+        return true;
+    }
+
+    return typeof value === 'object' &&
+        typeof value.selector === 'string' &&
+        (typeof value.visible === 'undefined' || typeof value.visible === 'boolean') &&
+        (typeof value.hidden === 'undefined' || typeof value.hidden === 'boolean');
 }
 
 function validationError(res: Response, errors: ValidationError[]): void {

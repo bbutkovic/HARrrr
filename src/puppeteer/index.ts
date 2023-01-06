@@ -1,5 +1,5 @@
 import { captureNetwork } from "@kaytwo/puppeteer-har";
-import { PuppeteerLifeCycleEvent } from "puppeteer";
+import { Page, PuppeteerLifeCycleEvent, WaitForOptions } from "puppeteer";
 import getBrowserInstance, { BrowserOptions } from "./browser";
 import setupGuard, { GuardOpts, isBlockedAccessError } from "./guard";
 import { ResourceUnreachableException } from "./guard/exception";
@@ -7,10 +7,20 @@ import { ResourceUnreachableException } from "./guard/exception";
 export interface CaptureOptions {
     // Timeout in ms
     timeout?: number;
-    waitUntil?: PuppeteerLifeCycleEvent;
+    waitUntil?: LifeCycleEvent;
+    waitForSelector?: Selector;
+    waitForDuration?: Duration;
     browser?: BrowserOptions;
     request?: RequestOptions;
 }
+
+export type LifeCycleEvent = PuppeteerLifeCycleEvent;
+export type Selector = string | {
+    selector: string;
+    visible?: boolean;
+    hidden?: boolean;
+};
+export type Duration = number; // ms
 
 export interface RequestOptions {
     headers?: string[];
@@ -47,9 +57,13 @@ export default async function gotoAndCapture(url: string,
     });
 
     try {
-        await page.goto(url, {
-            waitUntil: captureOptions?.waitUntil || "networkidle2"
-        });
+        await navigateAndWait(
+            page,
+            url,
+            captureOptions?.waitUntil,
+            captureOptions?.waitForSelector,
+            captureOptions?.waitForDuration
+        );
 
         const result = await getHar() as object;
         if (!requestIsValid) {
@@ -69,6 +83,42 @@ export default async function gotoAndCapture(url: string,
         await page.close();
         await browser.close();
     }
+}
+
+async function navigateAndWait(
+    page: Page,
+    url: string,
+    event?: LifeCycleEvent,
+    selector?: Selector,
+    duration?: Duration
+): Promise<void> {
+    const navigationOptions: WaitForOptions = {};
+    if (event) {
+        navigationOptions.waitUntil = event;
+    }
+
+    await page.goto(url, navigationOptions);
+
+    if (selector) {
+        await waitForSelector(page, selector);
+    }
+
+    if (duration) {
+        await waitForDuration(duration);
+    }
+}
+
+async function waitForSelector(page: Page, selector: Selector): Promise<void> {
+    typeof selector === 'string' ?
+        await page.waitForSelector(selector) :
+        await page.waitForSelector(selector.selector, {
+            visible: selector.visible,
+            hidden: selector.hidden,
+        });
+}
+
+async function waitForDuration(duration: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, duration));
 }
 
 function prepareHeaders(headers: string[]): [string, string][] {
