@@ -33,6 +33,8 @@ export default function serve(port: number, harService: HARService): void {
                 return validationError(res, errors.array());
             }
 
+            const abortController = setupAbortController(req);
+
             try {
                 const { url, timeout } = req.query;
 
@@ -44,7 +46,7 @@ export default function serve(port: number, harService: HARService): void {
                     captureOptions.timeout = timeout;
                 }
 
-                const har = await harService.captureWebpage(url);
+                const har = await harService.captureWebpage(url, captureOptions, abortController.signal);
                 res.status(200).json(har);
             } catch(e) {
                 if (e instanceof ResourceUnreachableException) {
@@ -88,6 +90,8 @@ export default function serve(port: number, harService: HARService): void {
                 waitForDuration,
             } = req.body;
 
+            const abortController = setupAbortController(req);
+
             try {
                 const captureOptions: CaptureOptions = {};
 
@@ -118,7 +122,7 @@ export default function serve(port: number, harService: HARService): void {
                     }
                 }
 
-                const har = await harService.captureWebpage(url, captureOptions);
+                const har = await harService.captureWebpage(url, captureOptions, abortController.signal);
                 res.status(200).json(har);
             } catch(e) {
                 if (e instanceof ResourceUnreachableException) {
@@ -172,4 +176,14 @@ function formatValidationErrors(errors: ValidationError[]): string {
     return errors
         .map(({ msg, param }) => `${param}: ${msg}`)
         .join(', ');
+}
+
+function setupAbortController(req: Request<unknown, unknown, unknown, unknown>): AbortController {
+    const abortController = new AbortController();
+
+    req.on('close', () => {
+        abortController.abort();
+    });
+
+    return abortController;
 }

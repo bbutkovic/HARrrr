@@ -28,7 +28,8 @@ export interface RequestOptions {
 
 export default async function gotoAndCapture(url: string,
     captureOptions?: CaptureOptions,
-    guard?: boolean | GuardOpts
+    guard?: boolean | GuardOpts,
+    abortSignal?: AbortSignal
 ): Promise<object> {
     const browser = await getBrowserInstance(captureOptions?.browser || {});
     const page = await browser.newPage();
@@ -51,6 +52,13 @@ export default async function gotoAndCapture(url: string,
 
         setupGuard(page, guard, (status) => requestIsValid = status);
     }
+
+    // if (abortSignal) {
+    //     abortSignal.addEventListener('abort', async () => {
+    //         page.close();
+    //         browser.close();
+    //     });
+    // }
 
     const getHar = await captureNetwork(page, {
         saveResponses: true
@@ -90,21 +98,34 @@ async function navigateAndWait(
     url: string,
     event?: LifeCycleEvent,
     selector?: Selector,
-    duration?: Duration
+    duration?: Duration,
+    abortSignal?: AbortSignal
 ): Promise<void> {
     const navigationOptions: WaitForOptions = {};
     if (event) {
         navigationOptions.waitUntil = event;
     }
 
+    if (abortSignal) {
+        if (abortSignal.aborted) {
+            return;
+        }
+
+        abortSignal.addEventListener('abort', async () => {
+            const client = await page.target().createCDPSession();
+
+            client.send('Page.stopLoading');
+        });
+    }
+
     await page.goto(url, navigationOptions);
 
     if (selector) {
-        await waitForSelector(page, selector);
+        await cancelableWait(waitForSelector(page, selector), abortSignal);
     }
 
     if (duration) {
-        await waitForDuration(duration);
+        await cancelableWait(waitForDuration(duration), abortSignal);
     }
 }
 
@@ -119,6 +140,23 @@ async function waitForSelector(page: Page, selector: Selector): Promise<void> {
 
 async function waitForDuration(duration: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, duration));
+}
+
+async function cancelableWait(promise: Promise<void>, abortSignal?: AbortSignal): Promise<void> {
+    if (!abortSignal) {
+        return promise;
+    }
+
+    if (abortSignal.aborted) {
+        return Promise.resolve();
+    }
+
+    return Promise.race<void>([
+        promise,
+        new Promise((resolve) => {
+            abortSignal.addEventListener('abort', () => resolve());
+        })
+    ]);
 }
 
 function prepareHeaders(headers: string[]): [string, string][] {

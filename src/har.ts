@@ -17,7 +17,7 @@ export default class HARService {
         this.options = options;
     }
 
-    async captureWebpage(url: string, captureOptions: CaptureOptions = {}): Promise<object> {
+    async captureWebpage(url: string, captureOptions: CaptureOptions = {}, abortSignal?: AbortSignal): Promise<object> {
         const timeout = captureOptions.timeout ?
             Math.min(
                 Math.max(captureOptions.timeout, captureOptions.waitForDuration || 0),
@@ -25,6 +25,6 @@ export default class HARService {
             ) :
             this.options.timeout;
 
-        return gotoAndCapture(url, { ...captureOptions, timeout }, this.options.guard);
+        return gotoAndCapture(url, { ...captureOptions, timeout }, this.options.guard, abortSignal);
     }
 }
