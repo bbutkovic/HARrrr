@@ -1,5 +1,5 @@
 import { captureNetwork } from "@kaytwo/puppeteer-har";
-import { Page, PuppeteerLifeCycleEvent, WaitForOptions } from "puppeteer";
+import { Page, PuppeteerLifeCycleEvent, WaitForOptions, Viewport as PuppeteerViewport } from "puppeteer";
 import getBrowserInstance, { BrowserOptions } from "./browser";
 import setupGuard, { GuardOpts, isBlockedAccessError } from "./guard";
 import { ResourceUnreachableException } from "./guard/exception";
@@ -7,6 +7,7 @@ import { ResourceUnreachableException } from "./guard/exception";
 export interface CaptureOptions {
     // Timeout in ms
     timeout?: number;
+    viewport?: Viewport;
     waitUntil?: LifeCycleEvent;
     waitForSelector?: Selector;
     waitForDuration?: Duration;
@@ -14,6 +15,7 @@ export interface CaptureOptions {
     request?: RequestOptions;
 }
 
+export type Viewport = PuppeteerViewport;
 export type LifeCycleEvent = PuppeteerLifeCycleEvent;
 export type Selector = string | {
     selector: string;
@@ -28,13 +30,17 @@ export interface RequestOptions {
 
 export default async function gotoAndCapture(url: string,
     captureOptions?: CaptureOptions,
-    guard?: boolean | GuardOpts
+    guard?: boolean | GuardOpts,
 ): Promise<object> {
     const browser = await getBrowserInstance(captureOptions?.browser || {});
     const page = await browser.newPage();
 
     if (captureOptions?.timeout) {
         page.setDefaultTimeout(captureOptions?.timeout);
+    }
+
+    if (captureOptions?.viewport) {
+        await page.setViewport(captureOptions.viewport);
     }
 
     if (captureOptions?.request?.headers) {
@@ -57,6 +63,7 @@ export default async function gotoAndCapture(url: string,
     });
 
     try {
+        console.log('navigating...');
         await navigateAndWait(
             page,
             url,
@@ -65,11 +72,17 @@ export default async function gotoAndCapture(url: string,
             captureOptions?.waitForDuration
         );
 
+        console.log('getting har....');
+
         const result = await getHar() as object;
+
+        console.log('got har');
         if (!requestIsValid) {
             console.info(`Invalid request to ${url}`);
             throw new ResourceUnreachableException(url);
         }
+
+        console.log('returning har');
 
         return result;
     } catch (e) {

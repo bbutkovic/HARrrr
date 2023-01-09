@@ -4,7 +4,7 @@ import bodyParser from 'body-parser';
 import { body, query, ValidationError, validationResult } from 'express-validator';
 
 import HARService, { CaptureOptions, ResourceUnreachableException } from './har';
-import { Duration, LifeCycleEvent, Selector } from './puppeteer';
+import { Duration, LifeCycleEvent, Selector, Viewport } from './puppeteer';
 import { TimeoutError } from 'puppeteer';
 
 export interface GetRequestBody {
@@ -16,6 +16,7 @@ export interface PostRequestBody {
     url: string;
     headers?: string[];
     timeout?: Duration;
+    viewport?: Viewport;
     waitUntil?: LifeCycleEvent;
     waitForSelector?: Selector;
     waitForDuration?: Duration;
@@ -47,17 +48,7 @@ export default function serve(port: number, harService: HARService): void {
                 const har = await harService.captureWebpage(url);
                 res.status(200).json(har);
             } catch(e) {
-                if (e instanceof ResourceUnreachableException) {
-                    return respondWithError(res, "Resource unreachable.", 422);
-                }
-
-                if (e instanceof TimeoutError) {
-                    return respondWithError(res, "Timeout reached.", 400);
-                }
-
-                console.error(`Unexpected error: ${e}`);
-
-                return respondWithError(res, "Internal server error", 500);
+                handleError(res, e);
             }
         }
     );
@@ -68,6 +59,13 @@ export default function serve(port: number, harService: HARService): void {
         body('headers').isArray().optional(),
         body('headers.*').isString(),
         body('timeout').isInt({ min: 1 }).optional(),
+        body('viewport').isObject().optional(),
+        body('viewport.width').isInt({ min: 1 }).optional(),
+        body('viewport.height').isInt({ min: 1 }).optional(),
+        body('viewport.deviceScaleFactor').isInt({ min: 1 }).optional(),
+        body('viewport.isMobile').isBoolean().optional(),
+        body('viewport.hasTouch').isBoolean().optional(),
+        body('viewport.isLandscape').isBoolean().optional(),
         body('waitUntil').isString().isIn([
             'load', 'domcontentloaded', 'networkidle0', 'networkidle2'
         ]).optional(),
@@ -83,6 +81,7 @@ export default function serve(port: number, harService: HARService): void {
                 url,
                 headers,
                 timeout,
+                viewport,
                 waitUntil,
                 waitForSelector,
                 waitForDuration,
@@ -99,6 +98,10 @@ export default function serve(port: number, harService: HARService): void {
 
                 if (timeout) {
                     captureOptions.timeout = timeout;
+                }
+
+                if (viewport) {
+                    captureOptions.viewport = viewport;
                 }
 
                 if (!waitUntil && !waitForSelector && !waitForDuration) {
@@ -121,17 +124,7 @@ export default function serve(port: number, harService: HARService): void {
                 const har = await harService.captureWebpage(url, captureOptions);
                 res.status(200).json(har);
             } catch(e) {
-                if (e instanceof ResourceUnreachableException) {
-                    return respondWithError(res, "Resource unreachable.", 422);
-                }
-
-                if (e instanceof TimeoutError) {
-                    return respondWithError(res, "Timeout reached.", 400);
-                }
-
-                console.error(`Unexpected error: ${e}`);
-
-                return respondWithError(res, "Internal server error", 500);
+                handleError(res, e);
             }
         }
     );
@@ -155,6 +148,20 @@ function waitForSelectorValidation(value: any): boolean {
 
 function validationError(res: Response, errors: ValidationError[]): void {
     respondWithError(res, formatValidationErrors(errors), 400);
+}
+
+function handleError(res: Response, error: Error): void {
+    if (error instanceof ResourceUnreachableException) {
+        return respondWithError(res, "Resource unreachable.", 422);
+    }
+
+    if (error instanceof TimeoutError) {
+        return respondWithError(res, "Timeout reached.", 400);
+    }
+
+    console.error(`Unexpected error: ${error}`);
+
+    return respondWithError(res, "Internal server error", 500);
 }
 
 function respondWithError(res: Response, message: string | object, statusCode = 422): void {
