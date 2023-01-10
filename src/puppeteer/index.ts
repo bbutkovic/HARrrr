@@ -43,6 +43,15 @@ export default async function gotoAndCapture(url: string,
         await page.setExtraHTTPHeaders(Object.fromEntries(headers));
     }
 
+    // Set viewport to 1280x1024 to avoid differences when running in a container.
+    // this is a temporary fix until we support setting the viewport from the options
+    // TODO: remove this when we support setting the viewport from the options
+    await page.setViewport({
+        width: 1280,
+        height: 1024,
+        deviceScaleFactor: 1,
+    });
+
     let requestIsValid = true;
     if (guard) {
         if (typeof guard !== 'object') {
