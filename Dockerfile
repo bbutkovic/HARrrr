@@ -18,12 +18,12 @@ FROM node:18-alpine
 
 # Puppeteer runtime dependencies
 RUN --mount=type=cache,target=/var/cache/apt \
-    apk update && apk add --no-cache nmap && \
-    echo @edge http://nl.alpinelinux.org/alpine/edge/community >> /etc/apk/repositories && \
-    echo @edge http://nl.alpinelinux.org/alpine/edge/main >> /etc/apk/repositories && \
+    apk update && \
+    echo @edge http://dl-cdn.alpinelinux.org/alpine/edge/community >> /etc/apk/repositories && \
+    echo @edge http://dl-cdn.alpinelinux.org/alpine/edge/main >> /etc/apk/repositories && \
     apk update && \
     apk add --no-cache \
-      chromium \
+      chromium@edge \
       harfbuzz \
       "freetype>2.8" \
       ttf-freefont \
