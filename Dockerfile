@@ -1,21 +1,24 @@
-FROM node:16-alpine as build
+# syntax=docker/dockerfile:1
+FROM node:18-alpine as build
 
-WORKDIR /usr/src/app
+WORKDIR /build
 
 COPY package*.json ./
 
-ENV NODE_ENV=development
-RUN npm ci
+RUN NODE_ENV=development npm ci
 
 COPY . .
 
 RUN npm run build
 
+RUN npm ci --only=production
+
 # Production image
-FROM node:16-alpine
+FROM node:18-alpine
 
 # Puppeteer runtime dependencies
-RUN apk update && apk add --no-cache nmap && \
+RUN --mount=type=cache,target=/var/cache/apt \
+    apk update && apk add --no-cache nmap && \
     echo @edge http://nl.alpinelinux.org/alpine/edge/community >> /etc/apk/repositories && \
     echo @edge http://nl.alpinelinux.org/alpine/edge/main >> /etc/apk/repositories && \
     apk update && \
@@ -26,24 +29,18 @@ RUN apk update && apk add --no-cache nmap && \
       ttf-freefont \
       nss
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV NODE_ENV=production
-
-COPY --from=build /usr/src/app/package*.json ./
-
-# Installs runtime dependencies
-RUN npm ci
-
-COPY --from=build /usr/src/app/dist ./dist
-
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+COPY --from=build /build/package*.json ./
+COPY --from=build /build/node_modules ./node_modules
+COPY --from=build /build/dist ./dist
 
 RUN adduser \
   --disabled-password \
   har
 
 USER har
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 CMD ["npm", "run", "start"]
